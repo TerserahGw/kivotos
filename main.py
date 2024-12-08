@@ -3,21 +3,8 @@ from fastapi.responses import StreamingResponse
 from gradio_client import Client
 from io import BytesIO
 import os
-import sys
-import time
-import threading
 
 app = FastAPI()
-
-def restart_server():
-    time.sleep(5 * 60)
-    print("Restarting server...")
-    python = sys.executable
-    os.execl(python, python, *sys.argv)
-
-@app.on_event("startup")
-def start_restart_thread():
-    threading.Thread(target=restart_server, daemon=True).start()
 
 @app.get("/")
 def read_root():
