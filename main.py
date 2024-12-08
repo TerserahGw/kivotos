@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.responses import StreamingResponse
 from gradio_client import Client
-from free_proxy import FreeProxy
+from fp.fp import FreeProxy
 from io import BytesIO
 import os
 import requests
@@ -9,7 +9,13 @@ import requests
 app = FastAPI()
 
 def get_random_proxy():
-    proxy = FreeProxy().get()
+    proxy = FreeProxy(
+        country_id=['US', 'BR'],
+        timeout=1,
+        rand=True,
+        anonym=True,
+        https=True
+    ).get()
     if proxy:
         return proxy
     else:
@@ -21,7 +27,7 @@ def read_root():
 
 def generate_image_with_kivotos(prompt: str) -> BytesIO:
     random_proxy = get_random_proxy()
-    proxies = {"http": f"http://{random_proxy}", "https": f"http://{random_proxy}"}
+    proxies = {"http": f"http://{random_proxy}", "https": f"https://{random_proxy}"}
 
     try:
         test_response = requests.get("https://httpbin.org/ip", proxies=proxies, timeout=5)
