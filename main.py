@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.responses import StreamingResponse
 from gradio_client import Client
-from proxyscrape import create_collector
+from free_proxy import FreeProxy
 from io import BytesIO
 import os
 import requests
@@ -9,10 +9,9 @@ import requests
 app = FastAPI()
 
 def get_random_proxy():
-    collector = create_collector("default", "http")
-    proxy = collector.get_proxy()
+    proxy = FreeProxy().get()
     if proxy:
-        return f"{proxy.host}:{proxy.port}"
+        return proxy
     else:
         raise HTTPException(status_code=500, detail="No proxy available")
 
