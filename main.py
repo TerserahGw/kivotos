@@ -1,20 +1,23 @@
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.responses import StreamingResponse
 from gradio_client import Client
-from apscheduler.schedulers.background import BackgroundScheduler
 from io import BytesIO
 import os
 import sys
+import time
+import threading
 
 app = FastAPI()
 
 def restart_server():
+    time.sleep(5 * 60)
     print("Restarting server...")
-    os.execv(sys.executable, [sys.executable, 'main.py', '--host', '0.0.0.0', '--port', '8080', '--reload'])
+    python = sys.executable
+    os.execl(python, python, *sys.argv)
 
-scheduler = BackgroundScheduler()
-scheduler.add_job(restart_server, 'interval', minutes=3)
-scheduler.start()
+@app.on_event("startup")
+def start_restart_thread():
+    threading.Thread(target=restart_server, daemon=True).start()
 
 @app.get("/")
 def read_root():
@@ -59,7 +62,4 @@ def kivotos_endpoint(text: str = Query(...)):
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8080))
-    try:
-        uvicorn.run(app, host="0.0.0.0", port=port)
-    finally:
-        scheduler.shutdown()
+    uvicorn.run(app, host="0.0.0.0", port=port)
