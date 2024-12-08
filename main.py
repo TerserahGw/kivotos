@@ -1,48 +1,53 @@
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.responses import StreamingResponse
 from gradio_client import Client
-from fp.fp import FreeProxy
 from io import BytesIO
 import os
+import random
 import requests
 import time
 
 app = FastAPI()
 
-def get_random_proxy():
-    retries = 3
+def get_random_proxy_from_file(file_path="all.txt"):
+    try:
+        with open(file_path, "r") as file:
+            proxies = file.readlines()
+            proxies = [proxy.strip() for proxy in proxies if proxy.strip()]
+            if not proxies:
+                raise HTTPException(status_code=500, detail="No proxies found in the file")
+            return random.choice(proxies)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reading proxy file: {str(e)}")
+
+def verify_proxy(proxy, retries=3):
+    proxies = {"http": f"http://{proxy}", "https": f"https://{proxy}"}
     for _ in range(retries):
         try:
-            proxy = FreeProxy(
-                country_id=['US', 'BR'],
-                timeout=3,
-                rand=True,
-                anonym=True,
-                https=True
-            ).get()
-            if proxy:
-                return proxy
-        except Exception as e:
-            print(f"Error retrieving proxy: {str(e)}")
-        time.sleep(2)
-    raise HTTPException(status_code=500, detail="No proxy available")
+            test_response = requests.get("https://httpbin.org/ip", proxies=proxies, timeout=5)
+            test_response.raise_for_status()
+            return True
+        except requests.RequestException:
+            time.sleep(2)
+    return False
 
 @app.get("/")
 def read_root():
     return {"status": "Server is running coba /kivotos?text="}
 
 def generate_image_with_kivotos(prompt: str) -> BytesIO:
-    random_proxy = get_random_proxy()
-    proxies = {"http": f"http://{random_proxy}", "https": f"https://{random_proxy}"}
-
-    try:
-        test_response = requests.get("https://httpbin.org/ip", proxies=proxies, timeout=5)
-        test_response.raise_for_status()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Proxy failed: {str(e)}")
-
-    os.environ["http_proxy"] = proxies["http"]
-    os.environ["https_proxy"] = proxies["https"]
+    retries = 5
+    for _ in range(retries):
+        random_proxy = get_random_proxy_from_file()
+        if verify_proxy(random_proxy):
+            proxies = {"http": f"http://{random_proxy}", "https": f"https://{random_proxy}"}
+            os.environ["http_proxy"] = proxies["http"]
+            os.environ["https_proxy"] = proxies["https"]
+            break
+        else:
+            print(f"Proxy {random_proxy} failed. Retrying with a new proxy...")
+    else:
+        raise HTTPException(status_code=500, detail="No valid proxy found after multiple attempts")
 
     client = Client("Linaqruf/kivotos-xl-2.0")
     result = client.predict(
