@@ -4,8 +4,6 @@ from gradio_client import Client
 from io import BytesIO
 import os
 import random
-import requests
-import time
 
 app = FastAPI()
 
@@ -16,24 +14,11 @@ def get_random_proxy_from_file(file_path="all.txt"):
             proxies = [proxy.strip() for proxy in proxies if proxy.strip()]
             if not proxies:
                 raise HTTPException(status_code=500, detail="No proxies found in the file")
-            return random.choice(proxies)
+            selected_proxy = random.choice(proxies)
+            print(f"Selected proxy: {selected_proxy}")
+            return selected_proxy
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error reading proxy file: {str(e)}")
-
-def verify_proxy(proxy, retries=3):
-    proxies = {
-        "http": f"http://{proxy}",
-        "https": f"http://{proxy}"
-    }
-    
-    for _ in range(retries):
-        try:
-            test_response = requests.get("http://httpbin.org/ip", proxies=proxies, timeout=10)
-            test_response.raise_for_status()
-            return True
-        except requests.RequestException:
-            time.sleep(3)
-    return False
 
 @app.get("/")
 def read_root():
@@ -43,16 +28,13 @@ def generate_image_with_kivotos(prompt: str) -> BytesIO:
     retries = 5
     for _ in range(retries):
         random_proxy = get_random_proxy_from_file()
-        if verify_proxy(random_proxy):
-            proxies = {"http": f"http://{random_proxy}", "https": f"http://{random_proxy}"}
-            os.environ["http_proxy"] = proxies["http"]
-            os.environ["https_proxy"] = proxies["https"]
-            break
-        else:
-            print(f"Proxy {random_proxy} failed. Retrying with a new proxy...")
-    else:
-        raise HTTPException(status_code=500, detail="No valid proxy found after multiple attempts")
+        proxies = {"http": f"http://{random_proxy}", "https": f"http://{random_proxy}"}
+        os.environ["http_proxy"] = proxies["http"]
+        os.environ["https_proxy"] = proxies["https"]
+        print(f"Using proxy: {proxies}")
+        break
 
+    print(f"Generating image with prompt: {prompt}")
     client = Client("Linaqruf/kivotos-xl-2.0")
     result = client.predict(
         prompt=prompt,
@@ -70,6 +52,8 @@ def generate_image_with_kivotos(prompt: str) -> BytesIO:
         add_quality_tags=True,
         api_name="/run"
     )
+
+    print(f"Result Kivotos: {result}")
 
     image_path = result[0][0].get('image')
 
