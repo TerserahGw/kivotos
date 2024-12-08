@@ -12,9 +12,9 @@ app = FastAPI()
 def restart_server():
     print("Restarting server...")
     python = sys.executable
+    sys.exit(0)
     uvicorn_cmd = ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080", "--reload"]
     subprocess.Popen(uvicorn_cmd)
-    sys.exit(0)
 
 scheduler = BackgroundScheduler()
 scheduler.add_job(restart_server, 'interval', minutes=3)
