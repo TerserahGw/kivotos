@@ -15,7 +15,7 @@ def restart_server():
     os.kill(os.getpid(), signal.SIGINT)
 
 scheduler = BackgroundScheduler()
-scheduler.add_job(restart_server, 'interval', minutes=5)
+scheduler.add_job(restart_server, 'interval', minutes=3)
 scheduler.start()
 
 def get_random_proxy_from_file(file_path="all.txt"):
@@ -33,13 +33,13 @@ def get_random_proxy_from_file(file_path="all.txt"):
 
 @app.get("/")
 def read_root():
-    return {"status": "Server is running coba /kivotos?text="}
+    return {"status": "Server is running. Try /kivotos?text="}
 
 def generate_image_with_kivotos(prompt: str) -> BytesIO:
     retries = 5
     for _ in range(retries):
         random_proxy = get_random_proxy_from_file()
-        proxies = {"http": f"http://{random_proxy}"}
+        proxies = {"http": f"http://{random_proxy}", "https": f"http://{random_proxy}"}
         os.environ["http_proxy"] = proxies["http"]
         print(f"Using proxy: {proxies}")
         break
