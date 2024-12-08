@@ -30,7 +30,6 @@ def generate_image_with_kivotos(prompt: str) -> BytesIO:
         random_proxy = get_random_proxy_from_file()
         proxies = {"http": f"http://{random_proxy}", "https": f"http://{random_proxy}"}
         os.environ["http_proxy"] = proxies["http"]
-        os.environ["https_proxy"] = proxies["https"]
         print(f"Using proxy: {proxies}")
         break
 
