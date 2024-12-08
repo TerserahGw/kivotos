@@ -1,11 +1,22 @@
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.responses import StreamingResponse
 from gradio_client import Client
+from apscheduler.schedulers.background import BackgroundScheduler
 from io import BytesIO
 import os
 import random
+import signal
+import sys
 
 app = FastAPI()
+
+def restart_server():
+    print("Restarting server...")
+    os.kill(os.getpid(), signal.SIGINT)
+
+scheduler = BackgroundScheduler()
+scheduler.add_job(restart_server, 'interval', minutes=5)
+scheduler.start()
 
 def get_random_proxy_from_file(file_path="all.txt"):
     try:
@@ -30,6 +41,7 @@ def generate_image_with_kivotos(prompt: str) -> BytesIO:
         random_proxy = get_random_proxy_from_file()
         proxies = {"http": f"http://{random_proxy}", "https": f"http://{random_proxy}"}
         os.environ["http_proxy"] = proxies["http"]
+        os.environ["https_proxy"] = proxies["https"]
         print(f"Using proxy: {proxies}")
         break
 
@@ -74,4 +86,7 @@ def kivotos_endpoint(text: str = Query(...)):
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 2020))
-    uvicorn.run(app, host="0.0.0.0", port=port, reload=True)
+    try:
+        uvicorn.run(app, host="0.0.0.0", port=port, reload=True)
+    finally:
+        scheduler.shutdown()
