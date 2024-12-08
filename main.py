@@ -13,15 +13,12 @@ from requests.packages.urllib3.poolmanager import PoolManager
 app = FastAPI()
 
 class HTTPConnectAdapter(HTTPAdapter):
-    def __init__(self, proxy_url, *args, **kwargs):
-        self.proxy_url = proxy_url
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     def init_poolmanager(self, *args, **kwargs):
         context = create_urllib3_context()
-        self.poolmanager = PoolManager(
-            *args, proxy_url=self.proxy_url, ssl_context=context, **kwargs
-        )
+        self.poolmanager = PoolManager(*args, ssl_context=context, **kwargs)
 
 def get_random_proxy_from_file(file_path="all.txt"):
     try:
@@ -42,8 +39,12 @@ def read_root():
 
 def setup_http_proxy(proxy_url):
     session = requests.Session()
-    adapter = HTTPConnectAdapter(proxy_url)
+    adapter = HTTPConnectAdapter()
     session.mount("https://", adapter)
+    session.proxies = {
+        "http": proxy_url,
+        "https": proxy_url
+    }
     return session
 
 def generate_image_with_kivotos(prompt: str) -> BytesIO:
