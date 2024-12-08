@@ -5,21 +5,27 @@ from fp.fp import FreeProxy
 from io import BytesIO
 import os
 import requests
+import time
 
 app = FastAPI()
 
 def get_random_proxy():
-    proxy = FreeProxy(
-        country_id=['US', 'BR'],
-        timeout=1,
-        rand=True,
-        anonym=True,
-        https=True
-    ).get()
-    if proxy:
-        return proxy
-    else:
-        raise HTTPException(status_code=500, detail="No proxy available")
+    retries = 3
+    for _ in range(retries):
+        try:
+            proxy = FreeProxy(
+                country_id=['US', 'BR'],
+                timeout=3,
+                rand=True,
+                anonym=True,
+                https=True
+            ).get()
+            if proxy:
+                return proxy
+        except Exception as e:
+            print(f"Error retrieving proxy: {str(e)}")
+        time.sleep(2)
+    raise HTTPException(status_code=500, detail="No proxy available")
 
 @app.get("/")
 def read_root():
@@ -31,6 +37,7 @@ def generate_image_with_kivotos(prompt: str) -> BytesIO:
 
     try:
         test_response = requests.get("https://httpbin.org/ip", proxies=proxies, timeout=5)
+        test_response.raise_for_status()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Proxy failed: {str(e)}")
 
