@@ -4,21 +4,8 @@ from gradio_client import Client
 from io import BytesIO
 import os
 import random
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3.connectionpool import HTTPConnectionPool
-from urllib3.util.ssl_ import create_urllib3_context
-from requests.packages.urllib3.poolmanager import PoolManager
 
 app = FastAPI()
-
-class HTTPConnectAdapter(HTTPAdapter):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def init_poolmanager(self, *args, **kwargs):
-        context = create_urllib3_context()
-        self.poolmanager = PoolManager(*args, ssl_context=context, **kwargs)
 
 def get_random_proxy_from_file(file_path="all.txt"):
     try:
@@ -37,35 +24,18 @@ def get_random_proxy_from_file(file_path="all.txt"):
 def read_root():
     return {"status": "Server is running coba /kivotos?text="}
 
-def setup_http_proxy(proxy_url):
-    session = requests.Session()
-    adapter = HTTPConnectAdapter()
-    session.mount("https://", adapter)
-    session.proxies = {
-        "http": proxy_url,
-        "https": proxy_url
-    }
-    return session
-
 def generate_image_with_kivotos(prompt: str) -> BytesIO:
     retries = 5
     for _ in range(retries):
         random_proxy = get_random_proxy_from_file()
-        proxy_url = f"http://{random_proxy}"
-        session = setup_http_proxy(proxy_url)
-        
-        print(f"Using HTTP CONNECT Proxy: {proxy_url}")
-        
-        try:
-            response = session.get("https://huggingface.co/api/spaces/Linaqruf/kivotos-xl-2.0")
-            print(f"Proxy Response: {response.status_code}")
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Error using proxy: {str(e)}")
-        
+        proxies = {"http": f"http://{random_proxy}", "https": f"http://{random_proxy}"}
+        os.environ["http_proxy"] = proxies["http"]
+        os.environ["https_proxy"] = proxies["https"]
+        print(f"Using proxy: {proxies}")
         break
 
     print(f"Generating image with prompt: {prompt}")
-    client = Client("Linaqruf/kivotos-xl-2.0", session=session)
+    client = Client("Linaqruf/kivotos-xl-2.0")
     result = client.predict(
         prompt=prompt,
         negative_prompt="nsfw, (low quality, worst quality:1.2), 3d, watermark, signature, ugly, poorly drawn",
