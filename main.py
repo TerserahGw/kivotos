@@ -21,14 +21,18 @@ def get_random_proxy_from_file(file_path="all.txt"):
         raise HTTPException(status_code=500, detail=f"Error reading proxy file: {str(e)}")
 
 def verify_proxy(proxy, retries=3):
-    proxies = {"http": f"http://{proxy}", "https": f"https://{proxy}"}
+    proxies = {
+        "http": f"http://{proxy}",
+        "https": f"http://{proxy}"
+    }
+    
     for _ in range(retries):
         try:
-            test_response = requests.get("https://httpbin.org/ip", proxies=proxies, timeout=5)
+            test_response = requests.get("http://httpbin.org/ip", proxies=proxies, timeout=10)
             test_response.raise_for_status()
             return True
         except requests.RequestException:
-            time.sleep(2)
+            time.sleep(3)
     return False
 
 @app.get("/")
@@ -40,7 +44,7 @@ def generate_image_with_kivotos(prompt: str) -> BytesIO:
     for _ in range(retries):
         random_proxy = get_random_proxy_from_file()
         if verify_proxy(random_proxy):
-            proxies = {"http": f"http://{random_proxy}", "https": f"https://{random_proxy}"}
+            proxies = {"http": f"http://{random_proxy}", "https": f"http://{random_proxy}"}
             os.environ["http_proxy"] = proxies["http"]
             os.environ["https_proxy"] = proxies["https"]
             break
