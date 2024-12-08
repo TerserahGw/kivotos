@@ -10,8 +10,8 @@ app = FastAPI()
 
 def restart_server():
     print("Restarting server...")
-    script_path = os.path.abspath('main.py')
-    os.execv(sys.executable, ['uvicorn', script_path + ':app', '--host', '0.0.0.0', '--port', '8080', '--reload'])
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    os.execv(sys.executable, ['uvicorn', 'main:app', '--host', '0.0.0.0', '--port', '8080', '--reload'])
 
 scheduler = BackgroundScheduler()
 scheduler.add_job(restart_server, 'interval', minutes=3)
